@@ -1,0 +1,10 @@
+{
+  "platformName": "EXENOS",
+  "maintenanceMode": false,
+  "maxUsers": 5,
+  "defaultTimeframe": "15m",
+  "defaultSymbol": "EURUSD",
+  "aiProvider": "OmniRoute",
+  "aiModel": "default",
+  "telegramEnabled": false
+}

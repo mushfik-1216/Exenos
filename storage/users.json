@@ -1,0 +1,11 @@
+[
+  {
+    "id": "user_admin_001",
+    "username": "admin",
+    "role": "admin",
+    "password_hash": "db5628811233fea5f4a3491ce5aff16a:ab8e213fdd373f2ca62d3a89567d60290d4c98e9467618e6642aa717d7f1ea147b4673ff0c214a1e384a26df49c7fe4ea23bb9f5dfd64a72dddb1d9d4edeba97",
+    "createdAt": "2026-09-05T13:07:19.319Z",
+    "isActive": true,
+    "lastLoginAt": "2026-09-05T13:07:19.586Z"
+  }
+]
