@@ -7,10 +7,11 @@ import { LoginCredentials } from "@/types/auth";
 
 export async function POST(request: Request) {
   try {
-    await FileManager.initDefaultFiles();
     const body = (await request.json()) as LoginCredentials;
+    const cleanUsername = body.username ? String(body.username).trim() : "";
+    const cleanPassword = body.password ? String(body.password).trim() : "";
 
-    if (!body.username || !body.password) {
+    if (!cleanUsername || !cleanPassword) {
       return NextResponse.json(
         { success: false, error: "Username and password are required" },
         { status: 400 }
@@ -18,7 +19,7 @@ export async function POST(request: Request) {
     }
 
     const users = await FileManager.getUsers();
-    const user = users.find((u) => u.username.toLowerCase() === body.username.toLowerCase());
+    const user = users.find((u) => u.username.toLowerCase() === cleanUsername.toLowerCase());
 
     if (!user || !user.isActive) {
       return NextResponse.json(
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const isMatch = await verifyPassword(body.password, user.password_hash);
+    const isMatch = await verifyPassword(cleanPassword, user.password_hash);
     if (!isMatch) {
       return NextResponse.json(
         { success: false, error: "Invalid username or password" },

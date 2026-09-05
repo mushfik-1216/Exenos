@@ -44,9 +44,9 @@ export default function SettingsPage() {
   // Telegram State
   const [telegramLoading, setTelegramLoading] = useState(false);
 
-  // Personal / Admin Account Profile State
+  // Personal Account / Admin Profile Credentials State
   const [currentPassword, setCurrentPassword] = useState("");
-  const [newUsername, setNewUsername] = useState(currentUser?.username || "");
+  const [newUsername, setNewUsername] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [profileLoading, setProfileLoading] = useState(false);
@@ -193,8 +193,8 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           currentPassword,
-          newUsername: newUsername !== currentUser?.username ? newUsername : undefined,
-          newPassword: newPassword || undefined,
+          newUsername: newUsername.trim() !== currentUser?.username ? newUsername.trim() : undefined,
+          newPassword: newPassword ? newPassword.trim() : undefined,
         }),
       });
 
@@ -230,8 +230,8 @@ export default function SettingsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          username: newAddUsername,
-          password: newAddPassword,
+          username: newAddUsername.trim(),
+          password: newAddPassword.trim(),
           role: newAddRole,
         }),
       });
@@ -264,7 +264,7 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: editingUser.id,
-          newPassword: editUserPassword,
+          newPassword: editUserPassword.trim(),
         }),
       });
 
@@ -347,7 +347,7 @@ export default function SettingsPage() {
 
           <div className="space-y-4 pt-1">
             <p className="text-neutral-400 text-xs">
-              Manage terminal user accounts. Only administrators can access this section. Maximum limit is strictly enforced at 5 accounts.
+              Manage terminal user accounts. Only administrators can access this section. Maximum limit is strictly enforced at 5 accounts. Adding a user will not remove or affect your admin account.
             </p>
 
             {/* Add User Form Drawer */}

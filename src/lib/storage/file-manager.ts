@@ -25,12 +25,12 @@ export class FileManager {
       this.memoryCache.delete(filename);
       return null;
     }
-    return entry.data as T;
+    return JSON.parse(JSON.stringify(entry.data)) as T;
   }
 
   private static setCached<T>(filename: StorageFileName, data: T): void {
     this.memoryCache.set(filename, {
-      data,
+      data: JSON.parse(JSON.stringify(data)),
       cachedAt: Date.now(),
     });
   }
@@ -49,7 +49,7 @@ export class FileManager {
     await Promise.all([
       (async () => {
         const users = await this.provider.readJson<User[]>("users.json");
-        if (!users || users.length === 0) {
+        if (!users || !Array.isArray(users) || users.length === 0) {
           const defaultAdminPassword = "AdminPassword123!";
           const hashedPassword = await hashPassword(defaultAdminPassword);
           const defaultUsers: User[] = [
@@ -65,6 +65,7 @@ export class FileManager {
           await this.provider.writeJson("users.json", defaultUsers);
           this.setCached("users.json", defaultUsers);
         } else {
+          // If users exist, ensure at least one active user exists
           this.setCached("users.json", users);
         }
       })(),
@@ -137,10 +138,17 @@ export class FileManager {
 
   static async getUsers(): Promise<User[]> {
     const cached = this.getCached<User[]>("users.json");
-    if (cached) return cached;
+    if (cached && Array.isArray(cached) && cached.length > 0) return cached;
     const data = (await this.provider.readJson<User[]>("users.json")) || [];
-    this.setCached("users.json", data);
-    return data;
+    if (data.length > 0) {
+      this.setCached("users.json", data);
+      return JSON.parse(JSON.stringify(data));
+    }
+    // Auto-init if empty
+    await this.initDefaultFiles();
+    const rechecked = (await this.provider.readJson<User[]>("users.json")) || [];
+    this.setCached("users.json", rechecked);
+    return JSON.parse(JSON.stringify(rechecked));
   }
 
   static async saveUsers(users: User[]): Promise<boolean> {

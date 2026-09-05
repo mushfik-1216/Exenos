@@ -12,11 +12,13 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { currentPassword, newUsername, newPassword } = body;
+    const currentPassword = body.currentPassword ? String(body.currentPassword).trim() : "";
+    const newUsername = body.newUsername ? String(body.newUsername).trim() : "";
+    const newPassword = body.newPassword ? String(body.newPassword).trim() : "";
 
     if (!currentPassword) {
       return NextResponse.json(
-        { success: false, error: "Current password is required to confirm changes" },
+        { success: false, error: "Current password is required to authorize changes" },
         { status: 400 }
       );
     }
@@ -25,7 +27,7 @@ export async function PATCH(request: NextRequest) {
     const userIndex = users.findIndex((u) => u.id === session.userId);
 
     if (userIndex === -1) {
-      return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
+      return NextResponse.json({ success: false, error: "User account not found" }, { status: 404 });
     }
 
     const user = users[userIndex];
@@ -34,7 +36,7 @@ export async function PATCH(request: NextRequest) {
     const isMatch = await verifyPassword(currentPassword, user.password_hash);
     if (!isMatch) {
       return NextResponse.json(
-        { success: false, error: "Incorrect current password" },
+        { success: false, error: "Incorrect current password. Verification failed." },
         { status: 400 }
       );
     }
@@ -42,9 +44,8 @@ export async function PATCH(request: NextRequest) {
     let usernameChanged = false;
 
     // Handle username change
-    if (newUsername && newUsername.trim().toLowerCase() !== user.username.toLowerCase()) {
-      const cleanUsername = newUsername.trim();
-      if (cleanUsername.length < 3) {
+    if (newUsername && newUsername.toLowerCase() !== user.username.toLowerCase()) {
+      if (newUsername.length < 3) {
         return NextResponse.json(
           { success: false, error: "Username must be at least 3 characters long" },
           { status: 400 }
@@ -52,22 +53,22 @@ export async function PATCH(request: NextRequest) {
       }
 
       const existing = users.find(
-        (u) => u.id !== user.id && u.username.toLowerCase() === cleanUsername.toLowerCase()
+        (u) => u.id !== user.id && u.username.toLowerCase() === newUsername.toLowerCase()
       );
       if (existing) {
         return NextResponse.json(
-          { success: false, error: `Username "${cleanUsername}" is already taken` },
+          { success: false, error: `Username "${newUsername}" is already taken` },
           { status: 400 }
         );
       }
 
-      user.username = cleanUsername;
+      user.username = newUsername;
       usernameChanged = true;
     }
 
     // Handle password change
     if (newPassword) {
-      if (typeof newPassword !== "string" || newPassword.length < 6) {
+      if (newPassword.length < 6) {
         return NextResponse.json(
           { success: false, error: "New password must be at least 6 characters long" },
           { status: 400 }
@@ -90,7 +91,7 @@ export async function PATCH(request: NextRequest) {
 
     const response = NextResponse.json({
       success: true,
-      message: "Profile credentials updated successfully",
+      message: "Account credentials updated successfully.",
       user: safeUser,
     });
 

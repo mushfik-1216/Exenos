@@ -56,20 +56,17 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { username, password, role } = body as {
-      username?: string;
-      password?: string;
-      role?: UserRole;
-    };
+    const cleanUsername = body.username ? String(body.username).trim() : "";
+    const cleanPassword = body.password ? String(body.password).trim() : "";
+    const role = body.role as UserRole;
 
-    if (!username || !password) {
+    if (!cleanUsername || !cleanPassword) {
       return NextResponse.json(
         { success: false, error: "Username and password are required" },
         { status: 400 }
       );
     }
 
-    const cleanUsername = username.trim();
     if (cleanUsername.length < 3) {
       return NextResponse.json(
         { success: false, error: "Username must be at least 3 characters long" },
@@ -77,7 +74,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (password.length < 6) {
+    if (cleanPassword.length < 6) {
       return NextResponse.json(
         { success: false, error: "Password must be at least 6 characters long" },
         { status: 400 }
@@ -99,12 +96,12 @@ export async function POST(request: NextRequest) {
     const exists = users.some((u) => u.username.toLowerCase() === cleanUsername.toLowerCase());
     if (exists) {
       return NextResponse.json(
-        { success: false, error: `Username "${cleanUsername}" is already taken` },
+        { success: false, error: `Username "${cleanUsername}" is already registered` },
         { status: 400 }
       );
     }
 
-    const hashedPassword = await hashPassword(password);
+    const hashedPassword = await hashPassword(cleanPassword);
     const assignedRole: UserRole = role === "admin" ? "admin" : "trader";
 
     const newUser: User = {
@@ -116,8 +113,8 @@ export async function POST(request: NextRequest) {
       isActive: true,
     };
 
-    users.push(newUser);
-    await FileManager.saveUsers(users);
+    const updatedUsers = [...users, newUser];
+    await FileManager.saveUsers(updatedUsers);
 
     const safeUser = {
       id: newUser.id,
@@ -175,8 +172,8 @@ export async function DELETE(request: NextRequest) {
     }
 
     const deletedUsername = users[targetIndex].username;
-    users.splice(targetIndex, 1);
-    await FileManager.saveUsers(users);
+    const updatedUsers = users.filter((u) => u.id !== targetUserId);
+    await FileManager.saveUsers(updatedUsers);
 
     return NextResponse.json({
       success: true,
@@ -238,13 +235,14 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (newPassword) {
-      if (newPassword.length < 6) {
+      const cleanPassword = newPassword.trim();
+      if (cleanPassword.length < 6) {
         return NextResponse.json(
           { success: false, error: "New password must be at least 6 characters long" },
           { status: 400 }
         );
       }
-      targetUser.password_hash = await hashPassword(newPassword);
+      targetUser.password_hash = await hashPassword(cleanPassword);
     }
 
     if (newRole) {
