@@ -187,3 +187,79 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const session = await getCurrentSession();
+    if (!session) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (session.role !== "admin") {
+      return NextResponse.json(
+        { success: false, error: "Forbidden: Administrator privileges required" },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const { userId, newPassword, newRole, newUsername } = body as {
+      userId: string;
+      newPassword?: string;
+      newRole?: UserRole;
+      newUsername?: string;
+    };
+
+    if (!userId) {
+      return NextResponse.json({ success: false, error: "User ID is required" }, { status: 400 });
+    }
+
+    const users = await FileManager.getUsers();
+    const targetIndex = users.findIndex((u) => u.id === userId);
+
+    if (targetIndex === -1) {
+      return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
+    }
+
+    const targetUser = users[targetIndex];
+
+    if (newUsername && newUsername.trim() !== targetUser.username) {
+      const cleanUsername = newUsername.trim();
+      const exists = users.some(
+        (u) => u.id !== userId && u.username.toLowerCase() === cleanUsername.toLowerCase()
+      );
+      if (exists) {
+        return NextResponse.json(
+          { success: false, error: `Username "${cleanUsername}" is already taken` },
+          { status: 400 }
+        );
+      }
+      targetUser.username = cleanUsername;
+    }
+
+    if (newPassword) {
+      if (newPassword.length < 6) {
+        return NextResponse.json(
+          { success: false, error: "New password must be at least 6 characters long" },
+          { status: 400 }
+        );
+      }
+      targetUser.password_hash = await hashPassword(newPassword);
+    }
+
+    if (newRole) {
+      targetUser.role = newRole === "admin" ? "admin" : "trader";
+    }
+
+    users[targetIndex] = targetUser;
+    await FileManager.saveUsers(users);
+
+    return NextResponse.json({
+      success: true,
+      message: `User account "${targetUser.username}" updated successfully.`,
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Failed to update user";
+    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+  }
+}

@@ -19,6 +19,8 @@ import {
   Trash2,
   KeyRound,
   UserCheck,
+  Edit,
+  X,
 } from "lucide-react";
 import { TVConnectionType } from "@/types/tradingview";
 import { User, UserRole } from "@/types/auth";
@@ -42,7 +44,7 @@ export default function SettingsPage() {
   // Telegram State
   const [telegramLoading, setTelegramLoading] = useState(false);
 
-  // Account Profile State
+  // Personal / Admin Account Profile State
   const [currentPassword, setCurrentPassword] = useState("");
   const [newUsername, setNewUsername] = useState(currentUser?.username || "");
   const [newPassword, setNewPassword] = useState("");
@@ -58,6 +60,11 @@ export default function SettingsPage() {
   const [newAddRole, setNewAddRole] = useState<UserRole>("trader");
   const [addUserLoading, setAddUserLoading] = useState(false);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+
+  // Admin Reset Password for other user modal
+  const [editingUser, setEditingUser] = useState<Omit<User, "password_hash"> | null>(null);
+  const [editUserPassword, setEditUserPassword] = useState("");
+  const [editUserLoading, setEditUserLoading] = useState(false);
 
   const isAdmin = currentUser?.role === "admin";
 
@@ -198,13 +205,13 @@ export default function SettingsPage() {
         setCurrentPassword("");
         setNewPassword("");
         setConfirmPassword("");
-        addToast("success", data.message || "Profile credentials updated successfully.");
+        addToast("success", data.message || "Account credentials updated successfully.");
         if (isAdmin) loadUsers();
       } else {
         addToast("error", data.error || "Failed to update credentials.");
       }
     } catch {
-      addToast("error", "Connection error while updating profile.");
+      addToast("error", "Connection error while updating credentials.");
     } finally {
       setProfileLoading(false);
     }
@@ -243,6 +250,36 @@ export default function SettingsPage() {
       addToast("error", "Failed to connect to server.");
     } finally {
       setAddUserLoading(false);
+    }
+  };
+
+  const handleAdminResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser || !editUserPassword) return;
+
+    setEditUserLoading(true);
+    try {
+      const res = await fetch("/api/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: editingUser.id,
+          newPassword: editUserPassword,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        addToast("success", data.message || `Password reset for ${editingUser.username}.`);
+        setEditingUser(null);
+        setEditUserPassword("");
+      } else {
+        addToast("error", data.error || "Failed to reset password.");
+      }
+    } catch {
+      addToast("error", "Failed to reset user password.");
+    } finally {
+      setEditUserLoading(false);
     }
   };
 
@@ -431,18 +468,35 @@ export default function SettingsPage() {
                             </span>
                           </td>
                           <td className="py-2.5 px-3 text-right">
-                            <Button
-                              type="button"
-                              variant="danger"
-                              size="sm"
-                              disabled={isSelf}
-                              isLoading={deletingUserId === u.id}
-                              onClick={() => handleDeleteUser(u.id, u.username)}
-                              title={isSelf ? "Cannot delete own account" : "Remove user"}
-                              className="px-2 py-0.5 text-[11px]"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
+                            <div className="flex items-center justify-end gap-1.5">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingUser(u);
+                                  setEditUserPassword("");
+                                }}
+                                title="Reset User Password"
+                                className="px-2 py-0.5 text-[11px] flex items-center gap-1"
+                              >
+                                <Edit className="w-3 h-3" />
+                                <span>Reset Pass</span>
+                              </Button>
+
+                              <Button
+                                type="button"
+                                variant="danger"
+                                size="sm"
+                                disabled={isSelf}
+                                isLoading={deletingUserId === u.id}
+                                onClick={() => handleDeleteUser(u.id, u.username)}
+                                title={isSelf ? "Cannot delete own account" : "Remove user"}
+                                className="px-2 py-0.5 text-[11px]"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -455,12 +509,68 @@ export default function SettingsPage() {
         </Card>
       )}
 
-      {/* ACCOUNT CREDENTIALS / PROFILE UPDATE */}
+      {/* ADMIN RESET USER PASSWORD MODAL */}
+      {editingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-[#0A0A0A] border border-[#222222] rounded-lg shadow-2xl p-5 text-neutral-100 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#1A1A1A]">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-neutral-200 flex items-center gap-2">
+                <KeyRound className="w-4 h-4 text-emerald-400" />
+                <span>Reset Password for {editingUser.username}</span>
+              </h3>
+              <button
+                onClick={() => setEditingUser(null)}
+                className="text-neutral-500 hover:text-neutral-200 p-1 rounded"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAdminResetPassword} className="space-y-3 text-xs">
+              <p className="text-neutral-400">
+                As an Administrator, you can assign a new password directly to this user account.
+              </p>
+
+              <Input
+                label="New Password"
+                type="password"
+                placeholder="Enter new password (min 6 chars)"
+                value={editUserPassword}
+                onChange={(e) => setEditUserPassword(e.target.value)}
+                required
+              />
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-[#181818]">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setEditingUser(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  isLoading={editUserLoading}
+                >
+                  Confirm Reset
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ADMIN & USER PROFILE CREDENTIALS (CHANGE USERNAME / PASSWORD) */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <KeyRound className="w-4 h-4 text-neutral-300" />
-            <CardTitle>Account Credentials & Profile</CardTitle>
+            <KeyRound className="w-4 h-4 text-emerald-400" />
+            <CardTitle>
+              {isAdmin ? "Admin Profile Credentials & Password" : "My Account Credentials & Password"}
+            </CardTitle>
           </div>
           <Badge variant={isAdmin ? "success" : "default"}>
             {isAdmin ? "ADMINISTRATOR" : "TRADER"}
@@ -469,13 +579,13 @@ export default function SettingsPage() {
 
         <form onSubmit={handleUpdateProfile} className="space-y-4 pt-1 text-xs">
           <p className="text-neutral-400 text-[11px]">
-            Update your terminal username and password. Changes take effect immediately.
+            Update your own {isAdmin ? "Admin" : "Trader"} username and password. Enter your current password below to authorize updates.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-3">
               <Input
-                label="Username"
+                label="Current Account Username"
                 type="text"
                 value={newUsername}
                 onChange={(e) => setNewUsername(e.target.value)}
@@ -483,7 +593,7 @@ export default function SettingsPage() {
               />
 
               <Input
-                label="Current Password (Required for Confirmation)"
+                label="Current Password (Required to Verify)"
                 type="password"
                 placeholder="Enter current password"
                 value={currentPassword}
