@@ -1,16 +1,4 @@
 {
   "testRun": true,
-  "timestamp": 1788624227357,
-  "tvConnections": {
-    "user_admin_001": {
-      "userId": "user_admin_001",
-      "connectionType": "session_id",
-      "encryptedValue": "8cd89b5686feca3d8c7a5b527811ae337b5a7153f2b6fb86eb1ee13d0bb67564",
-      "iv": "ea46067e9cb2fd3d423f45ea00a1ee83",
-      "authTag": "270a5390cdab54f773719219de73bd65",
-      "rememberSession": true,
-      "removeOnExit": true,
-      "updatedAt": "2026-09-05T16:15:45.830Z"
-    }
-  }
+  "timestamp": 1788628944091
 }

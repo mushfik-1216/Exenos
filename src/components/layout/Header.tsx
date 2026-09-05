@@ -9,6 +9,7 @@ import { TIMEFRAME_LIST } from "@/config/timeframes";
 import { SupportedSymbol } from "@/types/market";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { ExenosLogo } from "@/components/ui/ExenosLogo";
 import { formatPrice, formatPercent } from "@/lib/utils/formatters";
 import { ShieldAlert, ShieldCheck, LogOut, Radio, User } from "lucide-react";
 
@@ -54,7 +55,8 @@ const HeaderComponent: React.FC = () => {
     <header className="h-14 bg-[#080808] border-b border-[#1A1A1A] px-4 flex items-center justify-between select-none z-20">
       {/* Left: Brand & Symbol / Timeframe Selectors */}
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2 pr-2 border-r border-[#1A1A1A]">
+        <div className="flex items-center gap-2.5 pr-2 border-r border-[#1A1A1A]">
+          <ExenosLogo size={26} />
           <span className="font-bold text-sm tracking-wider text-neutral-100 font-mono">
             EXENOS
           </span>

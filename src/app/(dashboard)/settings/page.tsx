@@ -8,13 +8,28 @@ import { Select } from "@/components/ui/Select";
 import { Badge } from "@/components/ui/Badge";
 import { useUIStore } from "@/stores/useUIStore";
 import { useRiskStore } from "@/stores/useRiskStore";
-import { Settings, Tv, Shield, Send } from "lucide-react";
+import { useAuthStore } from "@/stores/useAuthStore";
+import {
+  Settings,
+  Tv,
+  Shield,
+  Send,
+  Users,
+  UserPlus,
+  Trash2,
+  KeyRound,
+  UserCheck,
+} from "lucide-react";
 import { TVConnectionType } from "@/types/tradingview";
+import { User, UserRole } from "@/types/auth";
+import { formatDateTime } from "@/lib/utils/formatters";
 
 export default function SettingsPage() {
   const addToast = useUIStore((s) => s.addToast);
   const riskSettings = useRiskStore((s) => s.settings);
   const updateRiskSettings = useRiskStore((s) => s.updateSettings);
+  const currentUser = useAuthStore((s) => s.user);
+  const setUser = useAuthStore((s) => s.setUser);
 
   // TradingView State
   const [tvType, setTvType] = useState<TVConnectionType>("session_id");
@@ -26,6 +41,25 @@ export default function SettingsPage() {
 
   // Telegram State
   const [telegramLoading, setTelegramLoading] = useState(false);
+
+  // Account Profile State
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newUsername, setNewUsername] = useState(currentUser?.username || "");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [profileLoading, setProfileLoading] = useState(false);
+
+  // User Management State (Admin only)
+  const [usersList, setUsersList] = useState<Omit<User, "password_hash">[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [newAddUsername, setNewAddUsername] = useState("");
+  const [newAddPassword, setNewAddPassword] = useState("");
+  const [newAddRole, setNewAddRole] = useState<UserRole>("trader");
+  const [addUserLoading, setAddUserLoading] = useState(false);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+
+  const isAdmin = currentUser?.role === "admin";
 
   useEffect(() => {
     let isMounted = true;
@@ -42,37 +76,68 @@ export default function SettingsPage() {
     };
   }, []);
 
-  const handleConnectTV = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!tvValue) return;
-
-    setTvLoading(true);
+  const loadUsers = useCallback(async () => {
+    if (!isAdmin) return;
+    setUsersLoading(true);
     try {
-      const res = await fetch("/api/tradingview/connect", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          connectionType: tvType,
-          credentialValue: tvValue,
-          rememberSession: tvRemember,
-          removeOnExit: tvRemoveExit,
-        }),
-      });
-
+      const res = await fetch("/api/users");
       const data = await res.json();
-      if (res.ok && data.success) {
-        setTvStatus("connected");
-        setTvValue("");
-        addToast("success", "TradingView credentials encrypted and connected successfully.");
-      } else {
-        addToast("error", data.error || "Failed to connect TradingView");
+      if (res.ok && data.success && Array.isArray(data.users)) {
+        setUsersList(data.users);
       }
     } catch {
-      addToast("error", "Network connection failed");
+      // ignore
     } finally {
-      setTvLoading(false);
+      setUsersLoading(false);
     }
-  }, [tvValue, tvType, tvRemember, tvRemoveExit, addToast]);
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (isAdmin) {
+      loadUsers();
+    }
+  }, [isAdmin, loadUsers]);
+
+  useEffect(() => {
+    if (currentUser?.username) {
+      setNewUsername(currentUser.username);
+    }
+  }, [currentUser?.username]);
+
+  const handleConnectTV = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!tvValue) return;
+
+      setTvLoading(true);
+      try {
+        const res = await fetch("/api/tradingview/connect", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            connectionType: tvType,
+            credentialValue: tvValue,
+            rememberSession: tvRemember,
+            removeOnExit: tvRemoveExit,
+          }),
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          setTvStatus("connected");
+          setTvValue("");
+          addToast("success", "TradingView credentials encrypted and connected successfully.");
+        } else {
+          addToast("error", data.error || "Failed to connect TradingView");
+        }
+      } catch {
+        addToast("error", "Network connection failed");
+      } finally {
+        setTvLoading(false);
+      }
+    },
+    [tvValue, tvType, tvRemember, tvRemoveExit, addToast]
+  );
 
   const handleDisconnectTV = useCallback(async () => {
     setTvLoading(true);
@@ -102,8 +167,110 @@ export default function SettingsPage() {
     }
   }, [addToast]);
 
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentPassword) {
+      addToast("warning", "Please enter your current password to confirm changes.");
+      return;
+    }
+
+    if (newPassword && newPassword !== confirmPassword) {
+      addToast("error", "New password and confirmation do not match.");
+      return;
+    }
+
+    setProfileLoading(true);
+    try {
+      const res = await fetch("/api/auth/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPassword,
+          newUsername: newUsername !== currentUser?.username ? newUsername : undefined,
+          newPassword: newPassword || undefined,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success && data.user) {
+        setUser(data.user);
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+        addToast("success", data.message || "Profile credentials updated successfully.");
+        if (isAdmin) loadUsers();
+      } else {
+        addToast("error", data.error || "Failed to update credentials.");
+      }
+    } catch {
+      addToast("error", "Connection error while updating profile.");
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAddUsername || !newAddPassword) {
+      addToast("warning", "Username and password are required.");
+      return;
+    }
+
+    setAddUserLoading(true);
+    try {
+      const res = await fetch("/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: newAddUsername,
+          password: newAddPassword,
+          role: newAddRole,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        addToast("success", data.message || "User created successfully.");
+        setNewAddUsername("");
+        setNewAddPassword("");
+        setShowAddUser(false);
+        loadUsers();
+      } else {
+        addToast("error", data.error || "Failed to create user.");
+      }
+    } catch {
+      addToast("error", "Failed to connect to server.");
+    } finally {
+      setAddUserLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async (userId: string, username: string) => {
+    if (!confirm(`Are you sure you want to remove user account "${username}"?`)) {
+      return;
+    }
+
+    setDeletingUserId(userId);
+    try {
+      const res = await fetch(`/api/users?id=${userId}`, { method: "DELETE" });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        addToast("info", data.message || `User "${username}" removed.`);
+        loadUsers();
+      } else {
+        addToast("error", data.error || "Failed to remove user.");
+      }
+    } catch {
+      addToast("error", "Failed to delete user.");
+    } finally {
+      setDeletingUserId(null);
+    }
+  };
+
   return (
-    <div className="space-y-4 max-w-5xl mx-auto font-mono">
+    <div className="space-y-6 max-w-5xl mx-auto font-mono">
+      {/* Header */}
       <div className="flex items-center justify-between bg-[#0A0A0A] p-4 rounded border border-[#1A1A1A]">
         <div>
           <h2 className="text-sm font-bold uppercase tracking-wider text-neutral-100 flex items-center gap-2">
@@ -111,11 +278,255 @@ export default function SettingsPage() {
             System & Risk Configuration
           </h2>
           <p className="text-xs text-neutral-500 mt-0.5">
-            TradingView Integration, Risk Limits & Storage Management
+            Admin Controls, TradingView Integration, Risk Limits & Storage
           </p>
         </div>
       </div>
 
+      {/* ADMIN-ONLY USER MANAGEMENT SECTION */}
+      {isAdmin && (
+        <Card className="border-[#1E2A20] bg-[#0A0E0B]/50">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-emerald-400" />
+              <CardTitle>User Management (Admin Only)</CardTitle>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline">
+                {usersList.length} / 5 USERS
+              </Badge>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setShowAddUser(!showAddUser)}
+                disabled={usersList.length >= 5}
+                className="flex items-center gap-1.5"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>{showAddUser ? "Cancel" : "Add New User"}</span>
+              </Button>
+            </div>
+          </CardHeader>
+
+          <div className="space-y-4 pt-1">
+            <p className="text-neutral-400 text-xs">
+              Manage terminal user accounts. Only administrators can access this section. Maximum limit is strictly enforced at 5 accounts.
+            </p>
+
+            {/* Add User Form Drawer */}
+            {showAddUser && (
+              <form
+                onSubmit={handleCreateUser}
+                className="p-4 rounded border border-[#243328] bg-[#0C140E] space-y-3"
+              >
+                <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>Register New Terminal Account</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <Input
+                    label="Username"
+                    placeholder="Enter username"
+                    value={newAddUsername}
+                    onChange={(e) => setNewAddUsername(e.target.value)}
+                    required
+                  />
+
+                  <Input
+                    label="Initial Password"
+                    type="password"
+                    placeholder="Min 6 characters"
+                    value={newAddPassword}
+                    onChange={(e) => setNewAddPassword(e.target.value)}
+                    required
+                  />
+
+                  <Select
+                    label="Role"
+                    value={newAddRole}
+                    onChange={(e) => setNewAddRole(e.target.value as UserRole)}
+                    options={[
+                      { label: "Trader (Standard Access)", value: "trader" },
+                      { label: "Admin (Full System Access)", value: "admin" },
+                    ]}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowAddUser(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="sm"
+                    isLoading={addUserLoading}
+                  >
+                    Create Account
+                  </Button>
+                </div>
+              </form>
+            )}
+
+            {/* Users Table */}
+            <div className="overflow-x-auto border border-[#1A1A1A] rounded bg-[#080808]">
+              <table className="w-full text-xs font-mono">
+                <thead>
+                  <tr className="text-neutral-500 border-b border-[#1A1A1A] text-left text-[11px] bg-[#0D0D0D]">
+                    <th className="py-2.5 px-3">USERNAME</th>
+                    <th className="py-2.5 px-3">ROLE</th>
+                    <th className="py-2.5 px-3">CREATED</th>
+                    <th className="py-2.5 px-3">LAST LOGIN</th>
+                    <th className="py-2.5 px-3">STATUS</th>
+                    <th className="py-2.5 px-3 text-right">ACTION</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#141414]">
+                  {usersLoading ? (
+                    <tr>
+                      <td colSpan={6} className="py-6 text-center text-neutral-500">
+                        Loading terminal accounts...
+                      </td>
+                    </tr>
+                  ) : usersList.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-6 text-center text-neutral-500">
+                        No registered users found.
+                      </td>
+                    </tr>
+                  ) : (
+                    usersList.map((u) => {
+                      const isSelf = u.id === currentUser?.id;
+                      return (
+                        <tr key={u.id} className="hover:bg-[#0E0E0E]">
+                          <td className="py-2.5 px-3 font-semibold text-neutral-200">
+                            {u.username}
+                            {isSelf && (
+                              <span className="ml-1.5 text-[10px] text-emerald-400 bg-emerald-950/40 border border-emerald-800/40 px-1 py-0.2 rounded">
+                                YOU
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <Badge variant={u.role === "admin" ? "success" : "default"}>
+                              {u.role.toUpperCase()}
+                            </Badge>
+                          </td>
+                          <td className="py-2.5 px-3 text-neutral-400">
+                            {formatDateTime(u.createdAt)}
+                          </td>
+                          <td className="py-2.5 px-3 text-neutral-400">
+                            {u.lastLoginAt ? formatDateTime(u.lastLoginAt) : "Never"}
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <span className="inline-flex items-center gap-1 text-emerald-400">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                              Active
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-right">
+                            <Button
+                              type="button"
+                              variant="danger"
+                              size="sm"
+                              disabled={isSelf}
+                              isLoading={deletingUserId === u.id}
+                              onClick={() => handleDeleteUser(u.id, u.username)}
+                              title={isSelf ? "Cannot delete own account" : "Remove user"}
+                              className="px-2 py-0.5 text-[11px]"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* ACCOUNT CREDENTIALS / PROFILE UPDATE */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <KeyRound className="w-4 h-4 text-neutral-300" />
+            <CardTitle>Account Credentials & Profile</CardTitle>
+          </div>
+          <Badge variant={isAdmin ? "success" : "default"}>
+            {isAdmin ? "ADMINISTRATOR" : "TRADER"}
+          </Badge>
+        </CardHeader>
+
+        <form onSubmit={handleUpdateProfile} className="space-y-4 pt-1 text-xs">
+          <p className="text-neutral-400 text-[11px]">
+            Update your terminal username and password. Changes take effect immediately.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <Input
+                label="Username"
+                type="text"
+                value={newUsername}
+                onChange={(e) => setNewUsername(e.target.value)}
+                required
+              />
+
+              <Input
+                label="Current Password (Required for Confirmation)"
+                type="password"
+                placeholder="Enter current password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-3">
+              <Input
+                label="New Password (Leave blank to keep unchanged)"
+                type="password"
+                placeholder="••••••••••••"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+
+              <Input
+                label="Confirm New Password"
+                type="password"
+                placeholder="••••••••••••"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              isLoading={profileLoading}
+              className="flex items-center gap-2"
+            >
+              <UserCheck className="w-3.5 h-3.5" />
+              <span>Update Credentials</span>
+            </Button>
+          </div>
+        </form>
+      </Card>
+
+      {/* GRID: TradingView & Risk Limits */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* TradingView Connection Card */}
         <Card>

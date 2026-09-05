@@ -1,5 +1,5 @@
 # Dependencies
-node_modules
+node_modules/
 /.pnp
 .pnp.js
 
@@ -15,6 +15,15 @@ tsconfig.tsbuildinfo
 
 # Environment variables
 .env*.local
+
+# Credentials & Service Account Keys
+exenos-*.json
+service-account*.json
+credentials*.json
+gcp-key*.json
+google-*.json
+*.pem
+*.key
 
 # Logs
 npm-debug.log*

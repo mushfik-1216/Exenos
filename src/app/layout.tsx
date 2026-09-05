@@ -3,8 +3,13 @@ import "./globals.css";
 import { ToastContainer } from "@/components/ui/ToastContainer";
 
 export const metadata: Metadata = {
-  title: "EXENOS | Market Intelligence & Risk Analysis Platform",
-  description: "Private AI-assisted market analysis platform for disciplined traders.",
+  title: "EXENOS",
+  description: "Private AI-assisted market intelligence & risk analysis platform.",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
