@@ -3,10 +3,12 @@ import { Candle, Quote, SupportedSymbol, Timeframe, ProviderName } from "@/types
 import { TVSessionManager } from "@/lib/tradingview/session-manager";
 import { SUPPORTED_SYMBOLS } from "@/config/symbols";
 import { TIMEFRAMES } from "@/config/timeframes";
+import { YahooFinanceProvider } from "./yahoo-provider";
 
 export class TradingViewProvider implements IMarketDataProvider {
   readonly name: ProviderName = "TradingView";
   readonly priority = 1;
+  private yahooProvider = new YahooFinanceProvider();
 
   constructor(private userId?: string) {}
 
@@ -208,51 +210,25 @@ export class TradingViewProvider implements IMarketDataProvider {
       };
     }
 
-    // Attempt to get live quote from TradingView
-    const quoteResult = await this.getQuote(symbol);
+    // Try fetching real market candles from Yahoo/Binance
+    const realCandlesResult = await this.yahooProvider.getCandles(symbol, timeframe, limit);
+    const tvQuote = await this.getQuote(symbol);
 
-    if (quoteResult.success && quoteResult.data) {
-      const quote = quoteResult.data;
-      const intervalSec = tfConfig.minutes * 60;
-      const nowSec = Math.floor(Date.now() / 1000);
-      const currentCandleTime = Math.floor(nowSec / intervalSec) * intervalSec;
+    if (realCandlesResult.success && realCandlesResult.data && realCandlesResult.data.length > 0) {
+      const candles = [...realCandlesResult.data];
 
-      // Generate candle array leading to TradingView spot price
-      const candles: Candle[] = [];
-      let basePrice = quote.price;
-      const pip = symConfig.pipSize;
+      // If live TV quote is available, sync the latest bar with TradingView's exact live price
+      if (tvQuote.success && tvQuote.data) {
+        const lastIndex = candles.length - 1;
+        const last = candles[lastIndex];
+        const livePrice = tvQuote.data.price;
 
-      // Seed pseudo-deterministic historical bars
-      const numCandles = Math.min(limit, 120);
-      for (let i = numCandles - 1; i >= 0; i--) {
-        const cTime = currentCandleTime - i * intervalSec;
-        if (i === 0) {
-          // Current live candle
-          candles.push({
-            time: cTime,
-            open: Number((basePrice - pip * (Math.sin(cTime) * 2)).toFixed(symConfig.decimals)),
-            high: Number(Math.max(basePrice, quote.high24h || basePrice).toFixed(symConfig.decimals)),
-            low: Number(Math.min(basePrice, quote.low24h || basePrice).toFixed(symConfig.decimals)),
-            close: quote.price,
-            volume: Math.floor(Math.random() * 500) + 100,
-          });
-        } else {
-          const drift = Math.sin(cTime / (intervalSec * 4)) * pip * 10;
-          const open = basePrice + drift;
-          const high = open + Math.abs(Math.cos(cTime)) * pip * 8;
-          const low = open - Math.abs(Math.sin(cTime)) * pip * 8;
-          const close = (open + high + low) / 3;
-
-          candles.push({
-            time: cTime,
-            open: Number(open.toFixed(symConfig.decimals)),
-            high: Number(high.toFixed(symConfig.decimals)),
-            low: Number(low.toFixed(symConfig.decimals)),
-            close: Number(close.toFixed(symConfig.decimals)),
-            volume: Math.floor(Math.random() * 800) + 200,
-          });
-          basePrice = close;
-        }
+        candles[lastIndex] = {
+          ...last,
+          close: livePrice,
+          high: Math.max(last.high, livePrice),
+          low: Math.min(last.low, livePrice),
+        };
       }
 
       return {
@@ -270,7 +246,7 @@ export class TradingViewProvider implements IMarketDataProvider {
 
     return {
       success: false,
-      error: quoteResult.error || "TradingView stream unavailable",
+      error: "Unable to retrieve candle series for TradingView overlay",
       metadata: {
         provider: this.name,
         timestamp: new Date().toISOString(),
