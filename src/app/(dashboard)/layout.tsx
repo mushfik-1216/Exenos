@@ -39,12 +39,31 @@ export default function DashboardLayout({
         fetchMarketData();
         fetchQuote();
       }
-      
-      const interval = setInterval(() => {
-        fetchQuote();
-      }, 10000);
 
-      return () => clearInterval(interval);
+      // Fast quote polling for live tick and chart updates
+      const quoteInterval = setInterval(() => {
+        fetchQuote();
+      }, 3000);
+
+      // Periodic background candles refresh
+      const candlesInterval = setInterval(() => {
+        fetchMarketData();
+      }, 30000);
+
+      // Handle visibility/focus changes
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === "visible") {
+          fetchQuote();
+          fetchMarketData();
+        }
+      };
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+
+      return () => {
+        clearInterval(quoteInterval);
+        clearInterval(candlesInterval);
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
+      };
     }
   }, [isAuthenticated, fetchMarketData, fetchQuote]);
 

@@ -11,7 +11,7 @@ interface CacheEntry<T> {
   cachedAt: number;
 }
 
-const CACHE_TTL_MS = 60 * 1000; // 1 minute in-memory cache
+const CACHE_TTL_MS = 2 * 1000; // 2 seconds fast cache to allow instant multi-device sync
 
 export class FileManager {
   private static provider = getStorageProvider();
@@ -65,7 +65,6 @@ export class FileManager {
           await this.provider.writeJson("users.json", defaultUsers);
           this.setCached("users.json", defaultUsers);
         } else {
-          // If users exist, ensure at least one active user exists
           this.setCached("users.json", users);
         }
       })(),
@@ -144,7 +143,6 @@ export class FileManager {
       this.setCached("users.json", data);
       return JSON.parse(JSON.stringify(data));
     }
-    // Auto-init if empty
     await this.initDefaultFiles();
     const rechecked = (await this.provider.readJson<User[]>("users.json")) || [];
     this.setCached("users.json", rechecked);
@@ -155,8 +153,10 @@ export class FileManager {
     if (users.length > APP_CONFIG.MAX_USERS) {
       throw new Error(`Maximum ${APP_CONFIG.MAX_USERS} users allowed.`);
     }
+    this.invalidateCache("users.json");
+    const res = await this.provider.writeJson("users.json", users);
     this.setCached("users.json", users);
-    return await this.provider.writeJson("users.json", users);
+    return res;
   }
 
   static async getSettings(): Promise<SystemSettings | null> {
@@ -168,8 +168,10 @@ export class FileManager {
   }
 
   static async saveSettings(settings: SystemSettings): Promise<boolean> {
+    this.invalidateCache("settings.json");
+    const res = await this.provider.writeJson("settings.json", settings);
     this.setCached("settings.json", settings);
-    return await this.provider.writeJson("settings.json", settings);
+    return res;
   }
 
   static async getJournal(): Promise<JournalEntry[]> {
@@ -181,8 +183,10 @@ export class FileManager {
   }
 
   static async saveJournal(entries: JournalEntry[]): Promise<boolean> {
+    this.invalidateCache("journal.json");
+    const res = await this.provider.writeJson("journal.json", entries);
     this.setCached("journal.json", entries);
-    return await this.provider.writeJson("journal.json", entries);
+    return res;
   }
 
   static async getSystemData(): Promise<Record<string, unknown>> {
@@ -194,7 +198,9 @@ export class FileManager {
   }
 
   static async saveSystemData(data: Record<string, unknown>): Promise<boolean> {
+    this.invalidateCache("system.json");
+    const res = await this.provider.writeJson("system.json", data);
     this.setCached("system.json", data);
-    return await this.provider.writeJson("system.json", data);
+    return res;
   }
 }

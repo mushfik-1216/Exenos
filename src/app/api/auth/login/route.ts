@@ -5,6 +5,15 @@ import { createSessionToken } from "@/lib/auth/session";
 import { APP_CONFIG } from "@/config/constants";
 import { LoginCredentials } from "@/types/auth";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+const NO_CACHE_HEADERS = {
+  "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+  "Pragma": "no-cache",
+  "Expires": "0",
+};
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as LoginCredentials;
@@ -14,7 +23,7 @@ export async function POST(request: Request) {
     if (!cleanUsername || !cleanPassword) {
       return NextResponse.json(
         { success: false, error: "Username and password are required" },
-        { status: 400 }
+        { status: 400, headers: NO_CACHE_HEADERS }
       );
     }
 
@@ -24,7 +33,7 @@ export async function POST(request: Request) {
     if (!user || !user.isActive) {
       return NextResponse.json(
         { success: false, error: "Invalid username or password" },
-        { status: 401 }
+        { status: 401, headers: NO_CACHE_HEADERS }
       );
     }
 
@@ -32,7 +41,7 @@ export async function POST(request: Request) {
     if (!isMatch) {
       return NextResponse.json(
         { success: false, error: "Invalid username or password" },
-        { status: 401 }
+        { status: 401, headers: NO_CACHE_HEADERS }
       );
     }
 
@@ -55,10 +64,13 @@ export async function POST(request: Request) {
       isActive: user.isActive,
     };
 
-    const response = NextResponse.json({
-      success: true,
-      user: safeUser,
-    });
+    const response = NextResponse.json(
+      {
+        success: true,
+        user: safeUser,
+      },
+      { headers: NO_CACHE_HEADERS }
+    );
 
     response.cookies.set({
       name: APP_CONFIG.SESSION_COOKIE_NAME,
@@ -73,6 +85,6 @@ export async function POST(request: Request) {
     return response;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal authentication error";
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    return NextResponse.json({ success: false, error: message }, { status: 500, headers: NO_CACHE_HEADERS });
   }
 }

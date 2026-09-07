@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { SupportedSymbol, Timeframe, Candle, Quote, ProviderMetadata } from "@/types/market";
 import { APP_CONFIG } from "@/config/constants";
+import { TIMEFRAMES } from "@/config/timeframes";
 
 interface MarketState {
   activeSymbol: SupportedSymbol;
@@ -33,7 +34,7 @@ export const useMarketStore = create<MarketState>((set, get) => ({
 
   setActiveSymbol: (symbol) => {
     if (get().activeSymbol === symbol) return;
-    set({ activeSymbol: symbol });
+    set({ activeSymbol: symbol, quote: null });
     get().fetchMarketData(symbol, get().activeTimeframe);
     get().fetchQuote(symbol);
   },
@@ -109,7 +110,57 @@ export const useMarketStore = create<MarketState>((set, get) => ({
       const json = await res.json();
 
       if (json.success && json.data) {
-        set({ quote: json.data, isLoadingQuote: false });
+        const q: Quote = json.data;
+        const currentCandles = get().candles;
+        const activeTf = get().activeTimeframe;
+        const activeSym = get().activeSymbol;
+
+        if (q.symbol === activeSym && currentCandles.length > 0) {
+          const tfConfig = TIMEFRAMES[activeTf] || { minutes: 15 };
+          const intervalSec = tfConfig.minutes * 60;
+          const currentCandleTime = Math.floor(q.timestamp / intervalSec) * intervalSec;
+
+          const updatedCandles = [...currentCandles];
+          const lastIndex = updatedCandles.length - 1;
+          const lastCandle = updatedCandles[lastIndex];
+
+          if (lastCandle.time === currentCandleTime || q.timestamp < lastCandle.time + intervalSec) {
+            // Update open candle
+            updatedCandles[lastIndex] = {
+              ...lastCandle,
+              close: q.price,
+              high: Math.max(lastCandle.high, q.price),
+              low: Math.min(lastCandle.low, q.price),
+              volume: (lastCandle.volume || 0) + 1,
+            };
+          } else if (currentCandleTime > lastCandle.time) {
+            // Bar rollover
+            updatedCandles.push({
+              time: currentCandleTime,
+              open: q.price,
+              high: q.price,
+              low: q.price,
+              close: q.price,
+              volume: 1,
+            });
+            if (updatedCandles.length > 150) {
+              updatedCandles.shift();
+            }
+          }
+
+          set({
+            quote: q,
+            candles: updatedCandles,
+            lastMetadata: json.metadata || get().lastMetadata,
+            isLoadingQuote: false,
+          });
+        } else {
+          set({
+            quote: q,
+            lastMetadata: json.metadata || get().lastMetadata,
+            isLoadingQuote: false,
+          });
+        }
       } else {
         set({ isLoadingQuote: false });
       }

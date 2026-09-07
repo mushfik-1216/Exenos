@@ -4,11 +4,20 @@ import { FileManager } from "@/lib/storage/file-manager";
 import { verifyPassword, hashPassword } from "@/lib/auth/password";
 import { APP_CONFIG } from "@/config/constants";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+const NO_CACHE_HEADERS = {
+  "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+  "Pragma": "no-cache",
+  "Expires": "0",
+};
+
 export async function PATCH(request: NextRequest) {
   try {
     const session = await getCurrentSession();
     if (!session) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401, headers: NO_CACHE_HEADERS });
     }
 
     const body = await request.json();
@@ -19,7 +28,7 @@ export async function PATCH(request: NextRequest) {
     if (!currentPassword) {
       return NextResponse.json(
         { success: false, error: "Current password is required to authorize changes" },
-        { status: 400 }
+        { status: 400, headers: NO_CACHE_HEADERS }
       );
     }
 
@@ -27,7 +36,7 @@ export async function PATCH(request: NextRequest) {
     const userIndex = users.findIndex((u) => u.id === session.userId);
 
     if (userIndex === -1) {
-      return NextResponse.json({ success: false, error: "User account not found" }, { status: 404 });
+      return NextResponse.json({ success: false, error: "User account not found" }, { status: 404, headers: NO_CACHE_HEADERS });
     }
 
     const user = users[userIndex];
@@ -37,7 +46,7 @@ export async function PATCH(request: NextRequest) {
     if (!isMatch) {
       return NextResponse.json(
         { success: false, error: "Incorrect current password. Verification failed." },
-        { status: 400 }
+        { status: 400, headers: NO_CACHE_HEADERS }
       );
     }
 
@@ -48,7 +57,7 @@ export async function PATCH(request: NextRequest) {
       if (newUsername.length < 3) {
         return NextResponse.json(
           { success: false, error: "Username must be at least 3 characters long" },
-          { status: 400 }
+          { status: 400, headers: NO_CACHE_HEADERS }
         );
       }
 
@@ -58,7 +67,7 @@ export async function PATCH(request: NextRequest) {
       if (existing) {
         return NextResponse.json(
           { success: false, error: `Username "${newUsername}" is already taken` },
-          { status: 400 }
+          { status: 400, headers: NO_CACHE_HEADERS }
         );
       }
 
@@ -71,7 +80,7 @@ export async function PATCH(request: NextRequest) {
       if (newPassword.length < 6) {
         return NextResponse.json(
           { success: false, error: "New password must be at least 6 characters long" },
-          { status: 400 }
+          { status: 400, headers: NO_CACHE_HEADERS }
         );
       }
       user.password_hash = await hashPassword(newPassword);
@@ -89,11 +98,14 @@ export async function PATCH(request: NextRequest) {
       isActive: user.isActive,
     };
 
-    const response = NextResponse.json({
-      success: true,
-      message: "Account credentials updated successfully.",
-      user: safeUser,
-    });
+    const response = NextResponse.json(
+      {
+        success: true,
+        message: "Account credentials updated successfully.",
+        user: safeUser,
+      },
+      { headers: NO_CACHE_HEADERS }
+    );
 
     if (usernameChanged) {
       const token = await createSessionToken({
@@ -116,6 +128,6 @@ export async function PATCH(request: NextRequest) {
     return response;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Failed to update profile";
-    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+    return NextResponse.json({ success: false, error: msg }, { status: 500, headers: NO_CACHE_HEADERS });
   }
 }

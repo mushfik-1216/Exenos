@@ -44,6 +44,9 @@ const TradingChartComponent: React.FC<TradingChartProps> = ({
   const ema9SeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
   const ema21SeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
   const priceLinesRef = useRef<IPriceLine[]>([]);
+  const prevCandlesCountRef = useRef<number>(0);
+  const prevSymbolRef = useRef<string>(symbol);
+  const prevTimeframeRef = useRef<string>(timeframe);
 
   const [showEMAs, setShowEMAs] = useState(true);
   const [showSMC, setShowSMC] = useState(true);
@@ -166,6 +169,7 @@ const TradingChartComponent: React.FC<TradingChartProps> = ({
     candleSeriesRef.current = candleSeries;
     ema9SeriesRef.current = ema9Series;
     ema21SeriesRef.current = ema21Series;
+    prevCandlesCountRef.current = 0;
 
     let animationFrameId: number;
     const resizeObserver = new ResizeObserver((entries) => {
@@ -194,7 +198,7 @@ const TradingChartComponent: React.FC<TradingChartProps> = ({
     };
   }, [height]);
 
-  // Update Data & Indicators
+  // Update Data & Real-time Candles
   useEffect(() => {
     if (!candleSeriesRef.current || !chartRef.current || uniqueCandles.length === 0) return;
 
@@ -206,7 +210,24 @@ const TradingChartComponent: React.FC<TradingChartProps> = ({
       close: c.close,
     }));
 
-    candleSeriesRef.current.setData(candleData);
+    const isSameSymbolAndTf =
+      prevSymbolRef.current === symbol && prevTimeframeRef.current === timeframe;
+    const isSingleBarUpdate =
+      isSameSymbolAndTf &&
+      prevCandlesCountRef.current === uniqueCandles.length &&
+      uniqueCandles.length > 0;
+
+    if (isSingleBarUpdate) {
+      // Fast single candle live update
+      const latest = candleData[candleData.length - 1];
+      candleSeriesRef.current.update(latest);
+    } else {
+      // Full dataset set
+      candleSeriesRef.current.setData(candleData);
+      prevCandlesCountRef.current = uniqueCandles.length;
+      prevSymbolRef.current = symbol;
+      prevTimeframeRef.current = timeframe;
+    }
 
     // EMAs
     if (showEMAs && ema9SeriesRef.current && ema21SeriesRef.current) {
@@ -303,7 +324,20 @@ const TradingChartComponent: React.FC<TradingChartProps> = ({
         priceLinesRef.current.push(tp1Line);
       }
     }
-  }, [uniqueCandles, seenTimes, ema9Data, ema21Data, smcResult, indicators, aiAnalysis, showEMAs, showSMC, showTargets]);
+  }, [
+    uniqueCandles,
+    seenTimes,
+    ema9Data,
+    ema21Data,
+    smcResult,
+    indicators,
+    aiAnalysis,
+    showEMAs,
+    showSMC,
+    showTargets,
+    symbol,
+    timeframe,
+  ]);
 
   return (
     <div className="relative w-full rounded border border-[#1A1A1A] bg-[#080808] overflow-hidden font-mono">
