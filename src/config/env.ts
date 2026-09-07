@@ -20,7 +20,8 @@ const envSchema = z.object({
   OMNIROUTE_BASE_URL: z.string().default("https://api.omniroute.ai/v1"),
   OMNIROUTE_MODEL: z.string().default("default"),
   
-  // Alpha Vantage
+  // Market Data Providers
+  TWELVE_DATA_API_KEY: z.string().optional(),
   ALPHA_VANTAGE_API_KEY: z.string().optional(),
   
   // Telegram
@@ -38,7 +39,6 @@ export function getEnv(): Env {
   const parsed = envSchema.safeParse(process.env);
   if (!parsed.success) {
     console.error("❌ Environment configuration validation failed:", parsed.error.format());
-    // Fall back to default development configuration in non-production
     return envSchema.parse({
       NODE_ENV: process.env.NODE_ENV || "development",
     });

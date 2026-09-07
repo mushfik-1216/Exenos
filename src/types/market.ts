@@ -16,7 +16,7 @@ export type SupportedSymbol =
 
 export type Timeframe = "1m" | "5m" | "15m" | "30m" | "1h" | "4h" | "1D";
 
-export type ProviderName = "TradingView" | "Yahoo Finance" | "Alpha Vantage";
+export type ProviderName = "Twelve Data" | "Yahoo Finance" | "Alpha Vantage";
 
 export interface Candle {
   time: number; // Unix timestamp in seconds

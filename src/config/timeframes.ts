@@ -5,7 +5,7 @@ export interface TimeframeConfig {
   label: string;
   minutes: number;
   seconds: number;
-  tradingViewInterval: string;
+  twelveDataInterval: string;
   yahooInterval: string;
 }
 
@@ -15,7 +15,7 @@ export const TIMEFRAMES: Record<Timeframe, TimeframeConfig> = {
     label: "1 Minute",
     minutes: 1,
     seconds: 60,
-    tradingViewInterval: "1",
+    twelveDataInterval: "1min",
     yahooInterval: "1m",
   },
   "5m": {
@@ -23,7 +23,7 @@ export const TIMEFRAMES: Record<Timeframe, TimeframeConfig> = {
     label: "5 Minutes",
     minutes: 5,
     seconds: 300,
-    tradingViewInterval: "5",
+    twelveDataInterval: "5min",
     yahooInterval: "5m",
   },
   "15m": {
@@ -31,7 +31,7 @@ export const TIMEFRAMES: Record<Timeframe, TimeframeConfig> = {
     label: "15 Minutes",
     minutes: 15,
     seconds: 900,
-    tradingViewInterval: "15",
+    twelveDataInterval: "15min",
     yahooInterval: "15m",
   },
   "30m": {
@@ -39,7 +39,7 @@ export const TIMEFRAMES: Record<Timeframe, TimeframeConfig> = {
     label: "30 Minutes",
     minutes: 30,
     seconds: 1800,
-    tradingViewInterval: "30",
+    twelveDataInterval: "30min",
     yahooInterval: "30m",
   },
   "1h": {
@@ -47,7 +47,7 @@ export const TIMEFRAMES: Record<Timeframe, TimeframeConfig> = {
     label: "1 Hour",
     minutes: 60,
     seconds: 3600,
-    tradingViewInterval: "60",
+    twelveDataInterval: "1h",
     yahooInterval: "1h",
   },
   "4h": {
@@ -55,7 +55,7 @@ export const TIMEFRAMES: Record<Timeframe, TimeframeConfig> = {
     label: "4 Hours",
     minutes: 240,
     seconds: 14400,
-    tradingViewInterval: "240",
+    twelveDataInterval: "4h",
     yahooInterval: "1h", // reconstructed or resampled
   },
   "1D": {
@@ -63,7 +63,7 @@ export const TIMEFRAMES: Record<Timeframe, TimeframeConfig> = {
     label: "1 Day",
     minutes: 1440,
     seconds: 86400,
-    tradingViewInterval: "D",
+    twelveDataInterval: "1day",
     yahooInterval: "1d",
   },
 };

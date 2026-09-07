@@ -9,6 +9,8 @@ export interface SystemSettings {
   aiProvider: "OmniRoute";
   aiModel: string;
   telegramEnabled: boolean;
+  twelveDataApiKey?: string;
+  alphaVantageApiKey?: string;
 }
 
 export interface UserSettings {

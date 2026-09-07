@@ -122,7 +122,6 @@ export class FileManager {
             initializedAt: new Date().toISOString(),
             lastHealthCheck: new Date().toISOString(),
             activeSessions: 0,
-            tvConnections: {},
           };
           await this.provider.writeJson("system.json", defaultSystem);
           this.setCached("system.json", defaultSystem);

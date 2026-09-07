@@ -1,6 +1,6 @@
 import { IMarketDataProvider, ProviderResult } from "./provider-interface";
 import { Candle, Quote, SupportedSymbol, Timeframe } from "@/types/market";
-import { TradingViewProvider } from "./tradingview-provider";
+import { TwelveDataProvider } from "./twelve-data-provider";
 import { YahooFinanceProvider } from "./yahoo-provider";
 import { AlphaVantageProvider } from "./alpha-vantage-provider";
 import { SUPPORTED_SYMBOLS } from "@/config/symbols";
@@ -39,9 +39,9 @@ const BASELINE_PRICES: Record<SupportedSymbol, number> = {
 export class MarketDataFailoverEngine {
   private providers: IMarketDataProvider[];
 
-  constructor(userId?: string) {
+  constructor(_userId?: string) {
     this.providers = [
-      new TradingViewProvider(userId),
+      new TwelveDataProvider(),
       new YahooFinanceProvider(),
       new AlphaVantageProvider(),
     ];

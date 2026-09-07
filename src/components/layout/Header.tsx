@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, memo } from "react";
+import React, { memo } from "react";
 import { useMarketStore } from "@/stores/useMarketStore";
 import { useRiskStore } from "@/stores/useRiskStore";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -27,23 +27,6 @@ const HeaderComponent: React.FC = () => {
 
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
-
-  const [tvStatus, setTvStatus] = useState<string>("disconnected");
-
-  useEffect(() => {
-    let isMounted = true;
-    fetch("/api/tradingview/status")
-      .then((res) => res.json())
-      .then((data) => {
-        if (isMounted) setTvStatus(data.status || "disconnected");
-      })
-      .catch(() => {
-        if (isMounted) setTvStatus("disconnected");
-      });
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   const statusVariant = {
     ACTIVE: "success",
@@ -125,7 +108,7 @@ const HeaderComponent: React.FC = () => {
           <Radio className="w-3 h-3 text-emerald-400 animate-pulse" />
           <span>PROVIDER:</span>
           <span className="text-neutral-200 font-medium">
-            {lastMetadata?.provider || (tvStatus === "connected" ? "TradingView" : "Yahoo Finance")}
+            {lastMetadata?.provider || "Twelve Data"}
           </span>
         </div>
 

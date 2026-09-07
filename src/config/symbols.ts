@@ -8,7 +8,7 @@ export interface SymbolConfig {
   decimals: number;
   defaultSpread: number;
   yahooTicker: string;
-  tradingViewSymbol: string;
+  twelveDataSymbol: string;
   alphaVantageSymbol: string;
 }
 
@@ -21,7 +21,7 @@ export const SUPPORTED_SYMBOLS: Record<SupportedSymbol, SymbolConfig> = {
     decimals: 5,
     defaultSpread: 0.0001,
     yahooTicker: "EURUSD=X",
-    tradingViewSymbol: "FX:EURUSD",
+    twelveDataSymbol: "EUR/USD",
     alphaVantageSymbol: "EURUSD",
   },
   GBPUSD: {
@@ -32,7 +32,7 @@ export const SUPPORTED_SYMBOLS: Record<SupportedSymbol, SymbolConfig> = {
     decimals: 5,
     defaultSpread: 0.00015,
     yahooTicker: "GBPUSD=X",
-    tradingViewSymbol: "FX:GBPUSD",
+    twelveDataSymbol: "GBP/USD",
     alphaVantageSymbol: "GBPUSD",
   },
   USDJPY: {
@@ -43,7 +43,7 @@ export const SUPPORTED_SYMBOLS: Record<SupportedSymbol, SymbolConfig> = {
     decimals: 3,
     defaultSpread: 0.015,
     yahooTicker: "USDJPY=X",
-    tradingViewSymbol: "FX:USDJPY",
+    twelveDataSymbol: "USD/JPY",
     alphaVantageSymbol: "USDJPY",
   },
   AUDUSD: {
@@ -54,7 +54,7 @@ export const SUPPORTED_SYMBOLS: Record<SupportedSymbol, SymbolConfig> = {
     decimals: 5,
     defaultSpread: 0.00012,
     yahooTicker: "AUDUSD=X",
-    tradingViewSymbol: "FX:AUDUSD",
+    twelveDataSymbol: "AUD/USD",
     alphaVantageSymbol: "AUDUSD",
   },
   USDCHF: {
@@ -65,7 +65,7 @@ export const SUPPORTED_SYMBOLS: Record<SupportedSymbol, SymbolConfig> = {
     decimals: 5,
     defaultSpread: 0.00015,
     yahooTicker: "USDCHF=X",
-    tradingViewSymbol: "FX:USDCHF",
+    twelveDataSymbol: "USD/CHF",
     alphaVantageSymbol: "USDCHF",
   },
   USDCAD: {
@@ -76,7 +76,7 @@ export const SUPPORTED_SYMBOLS: Record<SupportedSymbol, SymbolConfig> = {
     decimals: 5,
     defaultSpread: 0.00014,
     yahooTicker: "USDCAD=X",
-    tradingViewSymbol: "FX:USDCAD",
+    twelveDataSymbol: "USD/CAD",
     alphaVantageSymbol: "USDCAD",
   },
   NZDUSD: {
@@ -87,7 +87,7 @@ export const SUPPORTED_SYMBOLS: Record<SupportedSymbol, SymbolConfig> = {
     decimals: 5,
     defaultSpread: 0.00018,
     yahooTicker: "NZDUSD=X",
-    tradingViewSymbol: "FX:NZDUSD",
+    twelveDataSymbol: "NZD/USD",
     alphaVantageSymbol: "NZDUSD",
   },
   XAUUSD: {
@@ -98,7 +98,7 @@ export const SUPPORTED_SYMBOLS: Record<SupportedSymbol, SymbolConfig> = {
     decimals: 2,
     defaultSpread: 0.3,
     yahooTicker: "GC=F",
-    tradingViewSymbol: "OANDA:XAUUSD",
+    twelveDataSymbol: "XAU/USD",
     alphaVantageSymbol: "XAUUSD",
   },
   BTCUSD: {
@@ -109,7 +109,7 @@ export const SUPPORTED_SYMBOLS: Record<SupportedSymbol, SymbolConfig> = {
     decimals: 2,
     defaultSpread: 5.0,
     yahooTicker: "BTC-USD",
-    tradingViewSymbol: "BINANCE:BTCUSDT",
+    twelveDataSymbol: "BTC/USD",
     alphaVantageSymbol: "BTC",
   },
   ETHUSD: {
@@ -120,7 +120,7 @@ export const SUPPORTED_SYMBOLS: Record<SupportedSymbol, SymbolConfig> = {
     decimals: 2,
     defaultSpread: 0.5,
     yahooTicker: "ETH-USD",
-    tradingViewSymbol: "BINANCE:ETHUSDT",
+    twelveDataSymbol: "ETH/USD",
     alphaVantageSymbol: "ETH",
   },
   NAS100: {
@@ -131,7 +131,7 @@ export const SUPPORTED_SYMBOLS: Record<SupportedSymbol, SymbolConfig> = {
     decimals: 2,
     defaultSpread: 1.5,
     yahooTicker: "^NDX",
-    tradingViewSymbol: "NDX",
+    twelveDataSymbol: "QQQ",
     alphaVantageSymbol: "NAS100",
   },
   US30: {
@@ -142,7 +142,7 @@ export const SUPPORTED_SYMBOLS: Record<SupportedSymbol, SymbolConfig> = {
     decimals: 2,
     defaultSpread: 2.0,
     yahooTicker: "^DJI",
-    tradingViewSymbol: "DJI",
+    twelveDataSymbol: "DIA",
     alphaVantageSymbol: "US30",
   },
 };
